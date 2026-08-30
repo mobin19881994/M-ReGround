@@ -1,0 +1,54 @@
+name: Android Release Build
+
+on:
+  push:
+    branches:
+      - main # Change this to your release branch name if it is different
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Decode Android Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/keystore.jks
+
+      - name: Create key.properties
+        run: |
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=keystore.jks" >> android/key.properties
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=MREGROUND_USE_LOCAL_ONLY=false \
+            --dart-define=MREGROUND_ANDROID_PACKAGE=${{ secrets.MREGROUND_ANDROID_PACKAGE }} \
+            --dart-define=MREGROUND_EMAIL_LINK_URL=${{ secrets.MREGROUND_EMAIL_LINK_URL }} \
+            --dart-define=MREGROUND_ADMIN_EMAIL=${{ secrets.MREGROUND_ADMIN_EMAIL }}
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
