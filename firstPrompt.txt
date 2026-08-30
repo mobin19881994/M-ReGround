@@ -1,0 +1,76 @@
+
+Act as a Senior Principal Flutter & Native Mobile Architect. Build a complete, production-ready, bug-free cross-platform application (Android & iOS) named "M-ReGround" (formerly SnapOut) designed to break social media addiction (Instagram, YouTube) using 100% local storage, a 30-day version expiration engine, active foreground session timer, floating countdown overlay, dual-task choice logic, level-wise camera task matrix, adaptive onboarding, real-time crash analytics, and a fully centralized dynamic configuration architecture.
+
+### 1. Central Dynamic Configuration System (`lib/config/app_config.dart`)
+Create a master dynamic configuration engine containing ALL app parameters, toggles, thresholds, and administrative overrides in a single file:
+- Auth & Admin Credentials:
+  - `adminEmail`: "mobin.4488@gmail.com" (Bypasses OTP verification for instant passwordless Admin Login).
+  - `demoCustomerEmail`: "mobin.4499@gmail.com" (Bypasses app lock & restrictions for instant testing/demos).
+- Version Control & Timeouts:
+  - `appExpiryDays`: 30
+  - `emergencyBypassLimitPerDay`: 3
+  - `emergencyBypassDurationMinutes`: 2
+  - `defaultTimeSlotsInMinutes`: [1, 2, 4, 5, 10, 15, 30, 60, 120]
+  - `maxContinuousLimitMinutes`: 120
+- Floating Overlay Settings:
+  - `enableFloatingTimerOverlay`: true
+  - `floatingOverlayInitialPosition`: {"x": 20.0, "y": 50.0}
+  - `overlayOpacity`: 0.85
+- Adaptive Onboarding & Task Toggles:
+  - `gracePeriodDays`: 3 (Forces Level 1 Light tasks during first 3 days)
+  - `enableCameraTasks`: true
+  - `enableSensorTasks`: true
+  - `ambientLightThresholdLux`: 10.0 (Below this lux value, auto-switch from camera to motion/sensor tasks)
+- Task Level Threshold Limits:
+  - `level1MaxUsageMinutes`: 30
+  - `level2MaxUsageMinutes`: 60
+  - `level3MaxUsageMinutes`: 90
+  - `level4TriggerMinutes`: 120 (Triggers high usage alert modal + persistent banner)
+- Cost Constraint: Ensure 100% zero server costs by keeping all DB storage strictly local (Hive DB) and utilizing free Google ML Kit On-Device SDKs & Firebase Spark Tier.
+
+### 2. Active Foreground Session Timer & Floating Mini-Overlay
+- Active Foreground Tracking:
+  - Track target app usage ONLY when Instagram or YouTube is actively in the FOREGROUND.
+  - IF a phone call arrives, device is locked, or user switches to any other app (e.g., WhatsApp), IMMEDIATELY PAUSE the session timer. Phone call duration or idle time MUST NOT be deducted from the user's allowance.
+- Floating Countdown Overlay Widget:
+  - Controlled by `app_config.dart` parameters (`enableFloatingTimerOverlay`, `overlayOpacity`).
+  - When actively inside Instagram or YouTube, display a floating mini-badge at the top corner showing real-time remaining countdown (e.g., 29m 50s -> 29m 49s). Draggable and re-positionable.
+- State Persistence & Resume Logic:
+  - Save unused remaining allowance directly into local Hive DB.
+  - When the user returns to Instagram/YouTube later, RESUME counting from the exact saved remaining time. Do NOT force a re-selection prompt until the quota hits 0:00.
+
+### 3. Dual-Choice Interception & Dynamic Task Engine
+When active timer hits 0:00, launch the "Choose Your Break Task" Overlay with choices driven by `app_config.dart`:
+- Display choice cards with dedicated Lottie Animations / GIFs for visual guidance.
+- Choice A: Camera/ML Based Task (Smile, Blink, Drink Water, Pose Stretch).
+- Choice B: Sensor/Physical Motion Task (Steps Walk, Phone Shake, Box Breathing).
+- Choice C: Quick Mindful Affirmation / Math Puzzle.
+- Fail-Safe & Light Detection: If sensor/camera permissions are denied OR if ambient light falls below `ambientLightThresholdLux`, auto-highlight non-camera working alternatives.
+
+### 4. Comprehensive Task Matrix (Levels 1 to 4)
+- Level 1 (Light Friction): 3s Smile (ML Kit), 5 Eye Blinks (ML Kit), 10 Steps Walk (Pedometer), 10 Phone Shakes (Gyroscope), 5s Breath Hold.
+- Level 2 (Medium Friction): Drink 1 Glass Water (ML Kit), 3 Head Tilts (ML Pose), 30s Box Breathing, 20 Steps Walk, Focus Pattern Match Game.
+- Level 3 (Hard Friction): Standing Body Stretch (ML Pose), 1-Min Eyes Closed Meditation (ML Kit), 5 Motion Squats, Voice Affirmation.
+- Level 4 (Overuse Reset & Health Notice): High-Usage Health Alert Modal with persistent top banner. Requires 45-Second Lockout/Cooldown Timer + Level 3 Task to reset cycle back to Level 1.
+
+### 5. Admin Crash Diagnostics, Real-time Failure Events & Local Logging
+- Firebase Crashlytics & Analytics:
+  - Log real-time crash reports and custom failure events (`app_failure_event`, `overlay_permission_killed`, `accessibility_service_crashed`, `sensor_error`) to Firebase for Admin (`mobin.4488@gmail.com`) visibility.
+- Local Log File (`sample_logs.txt`):
+  - Append all runtime exceptions, native channel errors, and state saves with ISO timestamps to `sample_logs.txt`.
+- User Profile Screen UI: Include a "System & Activity Logs" section with:
+  - "View Logs" (displays contents of `sample_logs.txt`).
+  - "Clear Logs" (1-tap log flush).
+
+### 6. Authentication, Profile & Native Interception Architecture
+- Auth: Firebase Auth supporting Google Sign-In, Email OTP, and explicit OTP-Bypass for `mobin.4488@gmail.com` and `mobin.4499@gmail.com`.
+- Profile View: Usage breakdown (Instagram vs YouTube), Focus Personality Score, Daily Recovery Points, Emergency Bypass Tracker (uses `emergencyBypassLimitPerDay` & `emergencyBypassDurationMinutes` from config), System Logs Viewer.
+- Android Native: AccessibilityService, SYSTEM_ALERT_WINDOW, UsageStatsManager, and Native Battery Optimization Guide for Xiaomi/Samsung/Realme/Vivo.
+- iOS Native: Apple Screen Time Frameworks (FamilyControls, DeviceActivity, ManagedSettings) via Swift Channel.
+
+### Technical Stack & Quality:
+- Framework: Flutter (Dart) with strict Null Safety and zero compilation warnings.
+- Storage: Hive DB (Local Zero-Cost Persistence).
+- Analytics & ML: On-Device Google ML Kit, Firebase Analytics & Crashlytics (Spark Free Plan).
+
+Provide the complete directory structure, full implementation of `app_config.dart` with all dynamic parameters, active foreground timer service with floating overlay logic, `logger_service.dart`, task selection overlay UI, and User Profile UI.

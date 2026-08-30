@@ -1,0 +1,226 @@
+Act as a Senior Principal Flutter + Native Mobile Architect.
+
+Create a complete, production-focused Flutter app named "M-ReGround" for Android, iOS, Android TV, and Web with strict null safety, clean architecture, and zero analyzer warnings.
+
+Goal
+====
+Build an anti-social-media addiction app that controls Instagram/YouTube usage through local allowance timers, break-task friction, adaptive levels, and secure/authenticated access. Use local-first storage with optional Firebase telemetry.
+
+Recent Changes (Applied)
+========================
+
+Recent Changes (Applied)
+========================
+- Project rename:
+  - Display name and product strings changed to "M-ReGround".
+  - Dart package name changed to `m_reground` and imports updated across source files.
+
+- Demo / Local-only mode:
+  - `--dart-define=MREGROUND_USE_LOCAL_ONLY=true` runs the app without Firebase and enables simulated auth/data.
+  - Added `lib/core/services/demo_data_service.dart` with seeding, list, apply, and clear helpers.
+  - Auto-seeding behavior: demo data is auto-seeded when `demo_accounts` are missing or when `demo_auto_seed` is true; `seedNow()` force-seeds.
+  - `--dart-define=MREGROUND_FULL_DEMO=true` (test-only) sets `demo_auto_seed=true`, `demo_ignore_locks=true`, and activates `demoCustomerEmail` as active on startup.
+
+- Demo UX & profile controls:
+  - `lib/features/debug/demo_profiles_screen.dart`: UI to view/apply demo profiles.
+  - `lib/features/profile/profile_screen.dart`: toggles added: `Auto-seed demo on startup` and `Ignore locks for demo user` (persisted as `demo_ignore_locks`).
+  - `lib/widgets/demo_banner.dart`: banner explains demo behavior.
+
+
+- Timer & lock behavior:
+  - `lib/core/services/foreground_timer_service.dart`:
+    - `defaultTimeSlotsInMinutes` now includes short slots (1,2,3) to support quick demo testing (also accessible to demo users via helper).
+    - Demo-ignore-locks respected in `isLevel4Locked` (reads `demo_ignore_locks` from storage).
+    - When a break task is completed, `completeTaskAndResetToLevel1()` now clears `dailyUsageMinutes` and any level-4 lock so the user returns to Level 1.
+    - Timer lifecycle, persistence, and `_taskGateOpen` behavior preserved; overlay gating updated so demo users also see break-task overlays.
+
+- Tasks & Task engine:
+  - `lib/core/models/task_model.dart`: `BreakTask` has explicit `id` field for tracking.
+  - `lib/core/services/task_engine_service.dart`: full set of tasks for Level 1..4 added with stable `id` values (e.g. `l1_smile`, `l2_drink_water`, `l4_cooldown`).
+  - `lib/features/tasks/task_selection_overlay.dart` converted to a stateful widget with a Start/Complete flow: user must press `Start Task` before `Complete Task` is enabled; Lottie visuals still used.
+
+- Permissions & native integration:
+  - `lib/main.dart` requests runtime permissions at startup (Camera, ActivityRecognition) using `permission_handler` and calls `NativeInterceptionService.requestOverlayPermission()` to ask for overlay permissions via the native bridge.
+  - If Camera or ActivityRecognition permission is permanently denied, the app now opens app settings to prompt the user to enable them.
+  - Native channel names updated in Android/iOS stubs to `m_reground/native_interception` and `m_reground/native_overlay`.
+
+- Build & CI:
+  - A full-demo release APK was built for testing at `build/app/outputs/flutter-apk/app-release.apk` using:
+    - `--dart-define=MREGROUND_USE_LOCAL_ONLY=true`
+    - `--dart-define=MREGROUND_FULL_DEMO=true`
+    - `--dart-define=MREGROUND_ALLOW_BYPASS_IN_RELEASE=true`
+  - CI SCA workflow added: `.github/workflows/sca.yml` runs OWASP dependency-check and uploads reports as artifacts.
+
+- Tests & verification:
+  - `flutter analyze` and `flutter test` passed after edits; widget tests covering demo UI were added.
+  - Manual verification steps (recommended): seed demo data (Profile → Seed Demo Data), start a 1-minute allowance, wait for expiry, start and complete a break task; verify level resets and demo-ignore-locks behavior.
+
+- Developer notes & commands:
+  - Build debug with demo/local-only:
+    ```bash
+    flutter run -d <device> --dart-define=MREGROUND_USE_LOCAL_ONLY=true
+    ```
+  - Build release APK for full-demo testing:
+    ```bash
+    flutter clean
+    flutter build apk --release \
+      --dart-define=MREGROUND_USE_LOCAL_ONLY=true \
+      --dart-define=MREGROUND_FULL_DEMO=true \
+      --dart-define=MREGROUND_ALLOW_BYPASS_IN_RELEASE=true
+    ```
+  - Install on device/emulator:
+    ```bash
+    adb install -r build/app/outputs/flutter-apk/app-release.apk
+    ```
+
+If you'd like, I can append this summary to the `README.md` and `RELEASE_CHECKLIST.txt`, push a branch and open a PR, or add an integration test that automates the 1-minute demo flow.
+
+
+Project Requirements
+====================
+1) Central Dynamic Config (single source of truth)
+- Create: lib/config/app_config.dart
+- Keep all key settings as static const values, including:
+  - adminEmail (from --dart-define MREGROUND_ADMIN_EMAIL; fallback allowed for local testing)
+  - demoCustomerEmail (from --dart-define MREGROUND_DEMO_EMAIL; fallback allowed for local testing)
+  - appExpiryDays = 30
+  - emergencyBypassLimitPerDay = 3
+  - emergencyBypassDurationMinutes = 2
+  - defaultTimeSlotsInMinutes = [5, 10, 15, 30, 60, 120]
+  - maxContinuousLimitMinutes = 120
+  - enableFloatingTimerOverlay = true
+  - floatingOverlayInitialPosition = Offset(20.0, 50.0)
+  - overlayOpacity = 0.85
+  - gracePeriodDays = 3
+  - enableCameraTasks = true
+  - enableSensorTasks = true
+  - ambientLightThresholdLux = 10.0
+  - level1MaxUsageMinutes = 30
+  - level2MaxUsageMinutes = 60
+  - level3MaxUsageMinutes = 90
+  - level4TriggerMinutes = 120
+  - useLocalOnlyPersistence = true
+  - enableFirebaseSparkTelemetry = true
+  - logRetentionDays = 14
+  - allowBypassInRelease = false
+  - nativeInterceptionChannel, nativeOverlayChannel
+  - targetApps = ['instagram', 'youtube']
+  - email link auth defines:
+    - emailLinkSignInUrl from MREGROUND_EMAIL_LINK_URL
+    - androidPackageName from MREGROUND_ANDROID_PACKAGE
+    - iosBundleId from MREGROUND_IOS_BUNDLE_ID
+  - helper: hasPlaceholderEmailLinkConfig for release guard.
+
+2) Foreground Session Timer + Overlay
+- Implement active timer only when target app is in foreground.
+- Pause immediately on lock/call/other app/lifecycle pause.
+- Persist remaining seconds in Hive.
+- Resume from exact remaining time when user returns.
+- Draggable floating countdown badge with opacity from config.
+- When timer reaches 0, show break task overlay.
+
+3) Break Task Engine (Dual Choice + fallback)
+- Build task engine with TaskType {camera, sensor, mindful} and TaskLevel {1..4}.
+- Adaptive task choices must include camera/sensor/mindful options.
+- If camera denied or low light, auto-prioritize non-camera options.
+- Use local Lottie assets only (no remote URLs).
+  - assets/animations/camera_task.json
+  - assets/animations/sensor_task.json
+  - assets/animations/mindful_task.json
+
+4) Level Matrix
+- Level 1: Smile, blinks/breath hold, small walk/shake
+- Level 2: Drink water/head tilt/box breathing/pattern task
+- Level 3: Stretch/meditation/squats/affirmation
+- Level 4: Health alert + 45s cooldown + reset path to Level 1
+
+5) Auth, Security, and Profile
+- Firebase Auth:
+  - Google Sign-In
+  - Email Link OTP flow:
+    1) Send sign-in link to email
+    2) Verify using link and complete sign-in
+- Bypass accounts allowed only when policy permits:
+  - allowBypassInRelease=false by default
+  - in release mode, reject bypass unless explicitly enabled
+- Never log raw email/secret values in logs.
+- Profile screen must show:
+  - usage summary
+  - focus score
+  - recovery points
+  - emergency bypass tracker
+  - logs section (view/clear restricted to admin only)
+
+6) Logging + Telemetry
+- Logger service:
+  - write logs to sample_logs.txt (web fallback via Hive box)
+  - read/clear logs
+  - auto-prune logs older than logRetentionDays
+- Analytics/Crash:
+  - log custom events and failure events
+  - capture runtime errors to Crashlytics if configured
+
+7) Native Platform Hooks
+- Android:
+  - permissions for PACKAGE_USAGE_STATS, SYSTEM_ALERT_WINDOW, FOREGROUND_SERVICE, ACTIVITY_RECOGNITION, CAMERA
+  - AccessibilityService declaration + xml config
+  - MethodChannel stubs for initializeInterception and requestOverlayPermission
+  - add Android TV leanback launcher category
+- iOS:
+  - MethodChannel stubs for interception integration points
+  - NSCameraUsageDescription + NSMotionUsageDescription
+
+8) Web Hardening
+- Update web/index.html metadata to app name M-ReGround
+- Add baseline CSP meta policy suitable for Flutter web runtime.
+
+9) Release Documentation
+- Update README with:
+  - run/build commands
+  - required --dart-define values for release
+  - notes on Firebase config prerequisites
+- Create RELEASE_CHECKLIST.txt with:
+  - environment prerequisites
+  - build commands
+  - artifact paths
+  - security checks
+
+Technical Stack
+===============
+- Flutter (Dart, null safety)
+- Hive/Hive Flutter for local persistence
+- Firebase Core/Auth/Analytics/Crashlytics (optional runtime if config absent)
+- Lottie for local animations
+- Sensors and permission handling where relevant
+
+Quality Gates (must pass)
+=========================
+- flutter analyze -> no issues
+- flutter test -> pass
+- flutter build web --release -> success
+
+Important Build Notes
+=====================
+- Android release requires Android SDK + signing config.
+- iOS release requires macOS + Xcode.
+- Keep package name stable unless explicitly migrating identifiers.
+
+Deliverables (minimum)
+======================
+- Complete Flutter source code
+- All key services/screens wired and runnable
+- Local animation assets present
+- Updated README + release checklist
+- Working state persistence and auth flow scaffolding
+
+Acceptance Criteria
+===================
+- App runs on web and mobile targets (where environment supports).
+- Foreground allowance logic works with pause/resume and persistence.
+- Task overlay appears at 0:00 with adaptive fallbacks.
+- Security hardening present:
+  - release bypass protection
+  - no sensitive logging
+  - admin-only logs UI
+  - local asset animations
+- Analyzer/test gates pass.

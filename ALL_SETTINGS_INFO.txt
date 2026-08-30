@@ -1,0 +1,77 @@
+M-ReGround - Central Settings Information
+=========================================
+
+Purpose
+-------
+This project already keeps static app settings in one central file:
+lib/config/app_config.dart
+
+If you want to change app behavior, edit ONLY that file.
+
+How to keep static values in one file
+-------------------------------------
+1) Open: lib/config/app_config.dart
+2) Keep values as: static const
+3) Use values everywhere in code as: AppConfig.<settingName>
+4) Do not hardcode duplicate values in other files
+
+Example
+-------
+In app_config.dart:
+  static const int appExpiryDays = 30;
+
+In any service/screen:
+  final days = AppConfig.appExpiryDays;
+
+Current settings list
+---------------------
+
+Auth & Admin
+- adminEmail = mobin.4488@gmail.com
+- demoCustomerEmail = mobin.4499@gmail.com
+
+Version / Limits
+- appExpiryDays = 30
+- emergencyBypassLimitPerDay = 3
+- emergencyBypassDurationMinutes = 2
+- defaultTimeSlotsInMinutes = [5, 10, 15, 30, 60, 120]
+- maxContinuousLimitMinutes = 120
+
+Floating Overlay
+- enableFloatingTimerOverlay = true
+- floatingOverlayInitialPosition = Offset(20.0, 50.0)
+- overlayOpacity = 0.85
+
+Adaptive Onboarding / Task Toggles
+- gracePeriodDays = 3
+- enableCameraTasks = true
+- enableSensorTasks = true
+- ambientLightThresholdLux = 10.0
+
+Task Thresholds
+- level1MaxUsageMinutes = 30
+- level2MaxUsageMinutes = 60
+- level3MaxUsageMinutes = 90
+- level4TriggerMinutes = 120
+
+Cost / Telemetry
+- useLocalOnlyPersistence = true
+- enableFirebaseSparkTelemetry = true
+
+Native Channels
+- nativeInterceptionChannel = m_reground/native_interception
+- nativeOverlayChannel = m_reground/native_overlay
+
+Target Apps
+- targetApps = [instagram, youtube]
+
+Quick update checklist
+----------------------
+- Edit value in lib/config/app_config.dart
+- Run: flutter analyze
+- Run app: flutter run -d chrome (or your target device)
+
+Notes
+-----
+- Keep secrets out of source code in production.
+- For production builds, move emails/keys to secure config where possible.

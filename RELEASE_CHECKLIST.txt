@@ -1,0 +1,73 @@
+M-ReGround Release Checklist
+============================
+
+Current status (this machine)
+-----------------------------
+- Flutter analyze: PASS
+- Flutter test: PASS
+- Web release build: POSSIBLE
+- Android release build: BLOCKED (Android SDK missing on this machine)
+- iOS release build: BLOCKED (needs macOS + Xcode)
+
+Pre-release configuration (must do)
+-----------------------------------
+1) Firebase project setup
+- Enable Firebase Auth:
+  - Email Link (Passwordless)
+  - Google Sign-In
+- Add app configs:
+  - android/google-services.json
+  - ios/Runner/GoogleService-Info.plist
+  - web Firebase settings
+
+2) Build-time secure defines (required for release)
+- MREGROUND_ADMIN_EMAIL
+- MREGROUND_DEMO_EMAIL
+- MREGROUND_EMAIL_LINK_URL
+- MREGROUND_ANDROID_PACKAGE
+- MREGROUND_IOS_BUNDLE_ID
+
+Example (Android build):
+flutter build apk --release \
+  --dart-define=MREGROUND_ADMIN_EMAIL=admin@yourdomain.com \
+  --dart-define=MREGROUND_DEMO_EMAIL=demo@yourdomain.com \
+  --dart-define=MREGROUND_EMAIL_LINK_URL=https://auth.yourdomain.com/finishSignIn \
+  --dart-define=MREGROUND_ANDROID_PACKAGE=com.yourcompany.mreground \
+  --dart-define=MREGROUND_IOS_BUNDLE_ID=com.yourcompany.mreground
+
+3) Android requirements
+- Install Android Studio + SDK
+- flutter config --android-sdk "C:\\Users\\<user>\\AppData\\Local\\Android\\Sdk"
+- flutter doctor --android-licenses
+- Add signing key and release keystore config
+- Verify permissions policy text for:
+  - PACKAGE_USAGE_STATS
+  - SYSTEM_ALERT_WINDOW
+  - FOREGROUND_SERVICE
+  - ACTIVITY_RECOGNITION
+  - CAMERA
+
+4) iOS requirements
+- Build on macOS with Xcode
+- Enable capabilities/entitlements as needed for Screen Time frameworks
+- Configure Associated Domains for email link sign-in
+
+5) Security checks
+- Keep allowBypassInRelease=false
+- Keep placeholder auth config OUT of release builds
+- Verify admin-only log access in profile
+- Confirm log retention days per policy
+
+6) Final validation before upload
+- flutter analyze
+- flutter test
+- flutter build web --release
+- flutter build apk --release
+- flutter build appbundle --release
+- flutter build ios --release (macOS)
+
+Release artifacts
+-----------------
+- Web: build/web
+- Android APK: build/app/outputs/flutter-apk/app-release.apk
+- Android AAB: build/app/outputs/bundle/release/app-release.aab
